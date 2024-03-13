@@ -396,3 +396,7 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+
+#Jupyter Notebooks files to not be uploaded
+.ipynb_checkpoints
