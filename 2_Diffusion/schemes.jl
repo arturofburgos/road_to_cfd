@@ -9,7 +9,7 @@
 
 function scheme(u, un, i, sigma)
     # ETCS - Explicit Time Central Space
-    u[i] = un[i] + sigma * (un[i+1] - 2*un[i] + un[i-1])
+    u[i] = un[i] + sigma * (un[i+1] - 2 * un[i] + un[i-1])
 
     return u
 end
@@ -51,7 +51,7 @@ function scheme_vectorized1(u, sigma)
     # that way we do not need a spatial for loop, only temporal
 
     # ETCS - Explicit Time Central Space
-    u[J] = u[J] + sigma * (u[Jp1] - 2*u[J] + u[Jm1])
+    u[J] = u[J] + sigma * (u[Jp1] - 2 * u[J] + u[Jm1])
 
     return u
 end
@@ -79,7 +79,7 @@ end
 
 function scheme_vectorized2(u, un, sigma)
     # ETCS - Explicit Time Central Space
-    u[2:end-1] = un[2:end-1] + sigma*(un[3:end] - 2*un[2:end-1] + un[1:end-2])
+    u[2:end-1] = un[2:end-1] + sigma * (un[3:end] - 2 * un[2:end-1] + un[1:end-2])
 
     return u
 end
@@ -94,7 +94,7 @@ function update_soln_vectorized2(nt, nx, sigma)
         un = copy(u)
 
         u = scheme_vectorized2(u, un, sigma)
-        
+
         u[1] = 0
         u[end] = 0
         push!(u_hist, copy(u))

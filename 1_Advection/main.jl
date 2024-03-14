@@ -18,21 +18,21 @@ figures_dir = joinpath(main_directory, "figures")
 # Initialize variables: #
 #=======================#
 c = 1.0 # Wave speed
-T = 1.0/c # Period - total time
+T = 1.0 / c # Period - total time
 
 # Spatial domian number of points
 nx = 65 # n + 1 = 65 -> n = 64
 
 # Spatial grid for the numerical and exact solution 
-x = range(0,1,nx)
+x = range(0, 1, nx)
 hx = x[2] - x[1]
-xx = range(0,1,101)
+xx = range(0, 1, 101)
 hxx = xx[2] - xx[1]
 
 # Define CFL
 CFL = 0.95
-ht = hx*CFL/c
-nt = round(T/ht)
+ht = hx * CFL / c
+nt = round(T / ht)
 
 # Print important info:
 println("     T = $T")
@@ -48,7 +48,7 @@ println("   CFL = $CFL")
 # Create Wave Shape:
 function square(x)
     u = zeros(size(x))
-    u[findall(x -> x >0.4 && x<0.6, x)] .= 2
+    u[findall(x -> x > 0.4 && x < 0.6, x)] .= 2
     return u
 end
 
@@ -58,7 +58,7 @@ uinit = f(x)
 uinit_exact = f(xx)
 
 # Plot initial condition
-p = plot(x, uinit, title = "Initial Condition")
+p = plot(x, uinit, title="Initial Condition")
 savefig(p, joinpath(figures_dir, "initial_condition.png"))
 display(p)
 
@@ -103,5 +103,5 @@ anim2 = @animate for n in 1:length(u_hist)
 end
 
 # Save the .gif
-gif(anim1, joinpath(figures_dir, "dirichlet.gif"), fps = 15)
-gif(anim2, joinpath(figures_dir, "periodic.gif"), fps = 15)
+gif(anim1, joinpath(figures_dir, "dirichlet.gif"), fps=15)
+gif(anim2, joinpath(figures_dir, "periodic.gif"), fps=15)

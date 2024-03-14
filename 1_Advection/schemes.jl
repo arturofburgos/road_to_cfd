@@ -9,13 +9,13 @@
 
 function scheme(u, un, i, lmbda)
     # ETBS - Explicit Time Backward Space
-    u[i+1] = un[i] - lmbda*(un[i] - un[i-1])
+    u[i+1] = un[i] - lmbda * (un[i] - un[i-1])
 
     return u
 end
 
 function update_soln(nt, nx, lmbda)
-    
+
     # Numerical solution
     u = copy(uinit)
     u_hist = [copy(u)]
@@ -29,9 +29,9 @@ function update_soln(nt, nx, lmbda)
         end
         u[1] = 0
         u[end] = 0
-        push!(u_hist,copy(u))
-        
-        
+        push!(u_hist, copy(u))
+
+
     end
 
     return u_hist
@@ -49,17 +49,17 @@ function scheme_vectorized(u, x_vec, n, lmbda)
     # that way we do not need a spatial for loop, only temporal
 
     # ETBS - Explicit Time Backward Space
-    u[J] = u[J] - lmbda*(u[J] - u[Jm1])
+    u[J] = u[J] - lmbda * (u[J] - u[Jm1])
 
     #u_exact = f(x_vec .- c*n*ht)
-    u_exact = f(mod.(x_vec .- c* (n + 1)* ht, 1.0))
-    
+    u_exact = f(mod.(x_vec .- c * (n + 1) * ht, 1.0))
+
 
     return u, u_exact
 end
 
 function update_soln_vectorized(nt, x_vec, lmbda)
-    
+
     # Numerical solution
     u = copy(uinit)
     u_hist = [copy(u)]
@@ -71,9 +71,9 @@ function update_soln_vectorized(nt, x_vec, lmbda)
 
     for tstep in 1:nt
         u, u_exact = scheme_vectorized(u, x_vec, tstep, lmbda)
-        push!(u_hist,copy(u))
-        push!(u_hist_exact,copy(u_exact))
-        
+        push!(u_hist, copy(u))
+        push!(u_hist_exact, copy(u_exact))
+
     end
 
     return u_hist, u_hist_exact
