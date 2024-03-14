@@ -400,3 +400,6 @@ FodyWeavers.xsd
 
 #Jupyter Notebooks files to not be uploaded
 .ipynb_checkpoints
+
+#.vscode to not be uploaded
+.vscode
