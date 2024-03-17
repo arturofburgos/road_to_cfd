@@ -1,26 +1,20 @@
 # Here we list the functions needed to solve the numerical problem:
 #-----------------------------------------------------------------------------------------------------------------------------------
-# Godonov:
+# LLF:
 #=================#
 # Non-vectorized: #
 #=================#
 # For Dirichlet Boundary Conditions 
 # and no comparison with the analytical solution
 
-function godonov_flux(u, f)
+
+function LLF(u, f, fprime)
+
     uplus = u[Jp1]
     uminus = u[J]
+    α = max.(abs.(fprime(uplus)),abs.(fprime(uminus)))
+    flux = (f.(uplus)+f.(uminus))/2 - α/2 .*(uplus-uminus)
 
-    flux = similar(u)
-
-    for i in 1:length(u)
-        if uplus[i] < uminus[i] #rarefaction
-            flux[i] = min(f(uminus[i]), f(uplus[i]))
-        else
-            flux[i] = max(f(uminus[i]), f(uplus[i]))
-        end
-    end
-    
     return flux
 
 end
@@ -36,32 +30,24 @@ function update_soln(nt, condition)
     u_hist_exact = [copy(u_exact)]
 
     for tstep in 1:nt
-        flux = godonov_flux(u,f)
+        time = tstep*ht
+        flux = LLF(u,f,fprime)
 
         u[mask] .= (u - ((ht / hx) * (flux[J] - flux[Jm1])))[mask]
 
-        # if condition == "shock"
-        #     uexact[mask] = exact_shock(x, time, u0)[mask]
+        if condition == "shock"
+            u_exact[mask] = exact_shock(x, time, u0)[mask]
 
-        # elseif condition == "rarefaction"
-        #     uexact[mask] = exact_rarefraction(x, time, u0)[mask]
-        # end
+        elseif condition == "rarefaction"
+            u_exact[mask] = exact_rarefraction(x, time, u0)[mask]
+        end
 
         push!(u_hist, copy(u))
-        # push!(u_hist_exact, copy(u_exact))
+        push!(u_hist_exact, copy(u_exact))
 
     end
 
     return u_hist, u_hist_exact
 
 end
-
-
-        
-
-
-
-
-
-
 #-----------------------------------------------------------------------------------------------------------------------------------

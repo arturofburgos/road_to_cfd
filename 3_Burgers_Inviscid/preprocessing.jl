@@ -33,7 +33,7 @@ end
 
 
 function exact_rarefraction(x, time, u0)
-    uexact = similar(u0)
+    uexact = ones(size(u0))
     for i in eachindex(x)
         if x[i] <= time
             uexact[i] = 1
@@ -47,7 +47,7 @@ function exact_rarefraction(x, time, u0)
 end
 
 function exact_shock(x, time, u0)
-    uexact = similar(u0)
+    uexact = ones(size(u0))
     for i in eachindex(x)
         if time < 1
             if x[i] < 2*time

@@ -75,8 +75,7 @@ p = plot(x, u0, title="Initial Condition")
 savefig(p, "$figures_dir/initial_condition.png")
 display(p)
 
-# In case if we want to use the vectorized functions 
-# (and periodic boundary conditions), we define:
+
 J = collect(1:nx)
 Jm1 = circshift(J, 1)
 Jp1 = circshift(J, -1)
@@ -103,11 +102,16 @@ function update_plot(n, u_hist, x)
 end
 
 
+function update_plot(n, u_hist, u_hist_exact, x)
+    plot(x, u_hist[n])
+    plot!(x, u_hist_exact[n])
+end
+
 # Create the .gif
-anim1 = @animate for n in 1:100
-    update_plot(n, u_hist, x)
+anim1 = @animate for n in 1:length(u_hist)
+    update_plot(n, u_hist, u_hist_exact, x)
 end
 
 
 # Save the .gif
-gif(anim1, "$figures_dir/test.gif", fps=15)
+gif(anim1, "$figures_dir/numerical_solution.gif", fps=15)
