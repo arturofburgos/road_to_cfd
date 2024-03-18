@@ -52,7 +52,7 @@ fprime_max = maximum(abs.(fprime(u)))
 
 # Define CFL
 CFL = 0.95
-ht = hx * CFL / (2*fprime_max)
+ht = hx * CFL / (2 * fprime_max)
 nt = round(T / ht)
 
 # Print important info:

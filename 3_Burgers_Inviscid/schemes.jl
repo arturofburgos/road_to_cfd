@@ -12,15 +12,15 @@ function LLF(u, f, fprime)
 
     uplus = u[Jp1]
     uminus = u[J]
-    α = max.(abs.(fprime(uplus)),abs.(fprime(uminus)))
-    flux = (f.(uplus)+f.(uminus))/2 - α/2 .*(uplus-uminus)
+    α = max.(abs.(fprime(uplus)), abs.(fprime(uminus)))
+    flux = (f.(uplus) + f.(uminus)) / 2 - α / 2 .* (uplus - uminus)
 
     return flux
 
 end
 
 function update_soln(nt, condition)
-    
+
     # Numerical solution
     u = copy(u0)
     u_hist = [copy(u)]
@@ -30,10 +30,10 @@ function update_soln(nt, condition)
     u_hist_exact = [copy(u_exact)]
 
     for tstep in 1:nt
-        time = tstep*ht
-        flux = LLF(u,f,fprime)
+        time = tstep * ht
+        flux = LLF(u, f, fprime)
 
-        u[mask] .= (u - ((ht / hx) * (flux[J] - flux[Jm1])))[mask]
+        u[mask] .= (u-((ht/hx)*(flux[J]-flux[Jm1])))[mask]
 
         if condition == "shock"
             u_exact[mask] = exact_shock(x, time, u0)[mask]
