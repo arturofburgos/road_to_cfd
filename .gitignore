@@ -403,3 +403,5 @@ FodyWeavers.xsd
 
 #.vscode to not be uploaded
 .vscode
+
+.CondaPkg
