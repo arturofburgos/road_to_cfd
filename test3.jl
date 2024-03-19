@@ -1,4 +1,4 @@
-using Plots
+using Plots, LaTeXStrings
 pyplot()
 
 r_ini = 1.0
@@ -11,8 +11,12 @@ n = 100
 r = range(r_ini, stop=r_end, length=n)
 θ = range(θ_ini, stop=θ_end, length=n)'
 
-x1 = r .* cos.(θ)
+x1 = r * cos.(θ)
 y1 = r .* sin.(θ)
 z = ones(n, n) # Ensure z has the correct dimensions
 
-contourf(x1, y1, z, title="Initial Condition", color=:viridis)
+rcParams = PyPlot.PyDict(PyPlot.matplotlib."rcParams")
+rcParams["font.size"] = 10
+
+
+contourf(x1, y1, z, title=L"Plot of $\Gamma_3(x)$",  color=:viridis)

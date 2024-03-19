@@ -1,4 +1,5 @@
 using LaTeXStrings, Plots
+#pyplot()
 
 f(x, y) = (3x + y^2) * abs(sin(x) + cos(y))
 
@@ -22,3 +23,4 @@ xlabel!(L"x")
 ylabel!(L"y")
 
 heatmap(x, y, z, levels=20, color=:seaborn_rocket_gradient)
+heatmap(x, y, z, color=:seaborn_rocket_gradient)
