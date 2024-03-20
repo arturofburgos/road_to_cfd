@@ -46,20 +46,21 @@ function update_soln(nt)
     u = copy(u0)
     u_hist = [copy(u)]
 
+
     for tstep in 1:nt
         #time = tstep*nt # TODO: implement this in hdf5 file
         # Compute the RHS (2D Laplace)
         rhs = laplace(u, a, r, hr, hθ)
 
         # Update solution
-        u[mask] .= (u+rhs*ht)[mask]
+        u .= u + rhs * ht
         u = apply_BC(u)
 
 
         push!(u_hist, copy(u))
 
         # Stop Criteria
-        stop_criteria = sum(rhs[mask]) # There is a mask since we do not consider the walls of the Domain
+        stop_criteria = sum(rhs[2:end-1, 2:end-1]) # TODO: FINISH THE EXPLANATION: there is a mask since we do not consider the walls of the dommain , see zap!
 
         if stop_criteria < 1e-3
             println(stop_criteria)
