@@ -127,7 +127,8 @@ l1_norm_omega = 1.0
 l1_norm_psi = 1.0
 l1_target = 1e-6
 
-    
+w_hist = []
+psi_hist = []
 
 
 module soln
@@ -137,14 +138,19 @@ function L1norm(new, old)
     return norm
 end
 
-function update_soln(;psi, w, h, N, U, Re, alpha)
+function update_soln(;psi, w, h, N, U, Re, alpha, w_hist, psi_hist)
     
     l1_norm_omega = Inf
     l1_norm_psi = Inf
     l1_target = 1e-6
     tn = 0 
+    
+    push!(w_hist, copy(w))
+    push!(psi_hist, copy(psi))
 
-    while l1_norm_omega > l1_target || l1_norm_psi > l1_target
+    for step = 1:500 # Uncoment if you want to use for while loop, make sure to comment the below one
+        
+    # while l1_norm_omega > l1_target || l1_norm_psi > l1_target
         # Calculate psi at internal grid points (BCs for psi are automatically enforced)
         psiold = copy(psi)
         for i in 2:N-1
@@ -176,9 +182,12 @@ function update_soln(;psi, w, h, N, U, Re, alpha)
 
         l1_norm_psi = L1norm(psi, psiold)
         l1_norm_omega = L1norm(w, wold)
-        tn += 1
+        tn = step +1
+        # tn += 1 # Uncoment if you want to use for while loop, make sure to comment the above one
+        push!(w_hist, copy(w))
+        push!(psi_hist, copy(psi))
     end
-    return  psi, w, tn
+    return  psi_hist, w_hist, tn
 end
 end
 
@@ -187,7 +196,31 @@ println("l1_norm_psi = ", l1_norm_psi)
 println("l1_norm_omega = ", l1_norm_omega)
 
 begin
-    psi, w, tn  = soln.update_soln(;psi, w, h, N, U, Re, alpha)
+    psi_hist, w_hist, tn  = soln.update_soln(;psi, w, h, N, U, Re, alpha, w_hist, psi_hist)
 
 end
 
+# Update plot functions --> to be used in the .gif
+function update_plot_physical(n, u_hist, x, y)
+    contourf(x, y, transpose(u_hist[n]),
+        color=:jet, levels=20, aspect_ratio=:equal)
+    xlabel!("x")
+    ylabel!("y")
+end
+
+
+
+# Create the .gif's
+anim1 = @animate for n in 1:10:length(w_hist)
+    update_plot_physical(n, w_hist, x, y)
+end
+
+anim2 = @animate for n in 1:10:length(w_hist)
+    update_plot_physical(n, psi_hist, x, y)
+end
+
+
+# Save the .gif
+gif(anim1, fps=10)
+
+gif(anim2, fps=10)
