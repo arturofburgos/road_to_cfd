@@ -1,2 +1,2 @@
 # road_to_cfd
-Path to perform CFD, IBM, IBPM and FSI
+Path to perform CFD, IBPM and FSI
