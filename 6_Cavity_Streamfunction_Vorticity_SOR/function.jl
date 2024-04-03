@@ -43,11 +43,6 @@ function update_soln(; nx, ny, psi, w, h, N, U, Re, alpha, w_hist, psi_hist)
         # Calculate psi at internal grid points (BCs for psi are automatically enforced)
         psi, psiold = streamfunction_poisson(; psi, w, h, nx, ny)
 
-
-        # psiold = copy(psi)
-        # psi = calculate_psi_internal(psi0, w0, h)
-
-
         # Calculate Vorticity at the wall; omit corner points due to singularity
         w = apply_BC(; w, psi, U, h)
         wold = copy(w)
@@ -62,8 +57,6 @@ function update_soln(; nx, ny, psi, w, h, N, U, Re, alpha, w_hist, psi_hist)
                                     0.25 * Re * (psi[i+1, j] - psi[i-1, j]) * (w[i, j+1] - w[i, j-1])) / 4) + (1 - alpha) * w[i, j]
             end
         end
-
-
 
         l1_norm_psi = L1norm(psi, psiold)
         l1_norm_omega = L1norm(w, wold)
@@ -82,6 +75,5 @@ function update_soln(; nx, ny, psi, w, h, N, U, Re, alpha, w_hist, psi_hist)
 end
 
 export update_soln
-
 
 end
