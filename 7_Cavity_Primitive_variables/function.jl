@@ -1,6 +1,11 @@
 module soln
 using Printf
 
+function L1norm(new, old)
+    norm = sum(abs.(new - old))
+    return norm
+end
+
 
 function apply_BC(; w, psi, U, h)
 
