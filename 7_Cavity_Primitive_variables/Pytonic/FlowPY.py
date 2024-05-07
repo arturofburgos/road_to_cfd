@@ -143,6 +143,17 @@ def SetTimeStep(CFL,space,fluid):
 
 
 
+
+# def SetTimeStep(CFL,space):
+#     with np.errstate(divide='ignore'):
+#         dt=CFL/np.sum([np.amax(space.u)/space.dx,\
+#                            np.amax(space.v)/space.dy])
+#     #Escape condition if dt is infinity due to zero velocity initially
+#     if np.isinf(dt):
+#         dt=CFL*(space.dx+space.dy)
+#     space.dt=dt
+
+
 #The first function is used to get starred velocities from u and v at timestep t
 def GetStarredVelocities(space,fluid):
     #Save object attributes as local variable with explicity typing for improved readability

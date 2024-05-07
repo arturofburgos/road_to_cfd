@@ -4,12 +4,49 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from FlowPY import *
 
-
+# class Space:
+#     def __init__(self):
+#         pass
+    
+#     def CreateMesh(self,rowpts,colpts):
+#         #Domain gridpoints
+#         self.rowpts=rowpts
+#         self.colpts=colpts        #Velocity matrices
+#         self.u=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.v=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.u_star=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.v_star=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.u_next=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.v_next=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.u_c=np.zeros((self.rowpts,self.colpts))
+#         self.v_c=np.zeros((self.rowpts,self.colpts))
+#         #Pressure matrices
+#         self.p=np.zeros((self.rowpts+2,self.colpts+2))
+#         self.p_c=np.zeros((self.rowpts,self.colpts))
+#         #Set default source term
+#         self.SetSourceTerm()        
+        
+#     def SetDeltas(self,breadth,length):
+#         self.dx=length/(self.colpts-1)
+#         self.dy=breadth/(self.rowpts-1)    
+        
+#     def SetInitialU(self,U):
+#         self.u=U*self.u
+        
+#     def SetInitialV(self,V):
+#         self.v=V*self.v
+        
+#     def SetInitialP(self,P):
+#         self.p=P*self.p    
+        
+#     def SetSourceTerm(self,S_x=0,S_y=0):
+#         self.S_x=S_x
+#         self.S_y=S_y
 #### SPATIAL AND TEMPORAL INPUTS
 length=4 #Length of computational domain in the x-direction
 breadth=4 #Breadth of computational domain in the y-direction
-colpts=257 #Number of grid points in the x-direction #KEEP ODD
-rowpts=257 #Number of grid points in the y-direction #KEEP ODD#Create an object of the class Space called cavity
+colpts=64 #Number of grid points in the x-direction #KEEP ODD
+rowpts = 64 #Number of grid points in the y-direction #KEEP ODD#Create an object of the class Space called cavity
 cavity=Space()
 cavity.CreateMesh(rowpts,colpts)
 cavity.SetDeltas(breadth,length)
