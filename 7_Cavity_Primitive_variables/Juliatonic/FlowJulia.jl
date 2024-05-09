@@ -1,6 +1,10 @@
 module FlowJulia
 
-export Boundary, Space, CreateMesh!, SetDeltas!, SetTimeStep!
+using FileIO
+export Boundary, Space, CreateMesh!, Fluid, SetCentrePUV!
+export SetDeltas!, SetTimeStep!, setPBoundary!, WriteToFile
+export GetStarredVelocities!, SolvePressurePoisson!, SolveMomentumEquation!
+export setUBoundary!, setVBoundary!, MakeResultDirectory
 
 struct Boundary
     type::String
@@ -114,8 +118,11 @@ end
 
 
 # Set boundary conditions for horizontal velocity
-function setUBoundary!(space::Space, left::Boundary, right::Boundary,
-    top::Boundary, bottom::Boundary)
+function setUBoundary!(space::Space,
+                       left::Boundary,
+                       right::Boundary,
+                       top::Boundary,
+                       bottom::Boundary)
 
     # Left
     if left.type == "D"
@@ -147,8 +154,11 @@ function setUBoundary!(space::Space, left::Boundary, right::Boundary,
 end
 
 
-function setVBoundary!(space::Space, left::Boundary, right::Boundary,
-    top::Boundary, bottom::Boundary)
+function setVBoundary!(space::Space,
+                       left::Boundary,
+                       right::Boundary,
+                       top::Boundary,
+                       bottom::Boundary)
 
     # Left
     if left.type == "D"
@@ -179,8 +189,11 @@ function setVBoundary!(space::Space, left::Boundary, right::Boundary,
     end
 end
 
-function setPBoundary!(space::Space, left::Boundary, right::Boundary,
-    top::Boundary, bottom::Boundary)
+function setPBoundary!(space::Space,
+                       left::Boundary,
+                       right::Boundary,
+                       top::Boundary,
+                       bottom::Boundary)
 
     # Left
     if left.type == "D"
@@ -221,7 +234,7 @@ function SetTimeStep!(CFL::Float64, space::Space)
 end
 
 
-function GetStarredVelocities(space::Space, fluid::Fluid)
+function GetStarredVelocities!(space::Space, fluid::Fluid)
     # Save struct attributes for improve readability
 
     rows = space.rowpts
@@ -248,11 +261,181 @@ function GetStarredVelocities(space::Space, fluid::Fluid)
     #u1_y = (u[3:end, 2:end-1] - u[1:end-2, 2:end-1])/(2*dy)
     u1_y = (u[3:rows+2, 2:cols+1] - u[1:rows, 2:cols+1])/(2*dy)
     u1_x = (u[2:rows+1, 3:cols+2] - u[2:rows+1, 1:cols])/(2*dx)
-    u2_y = (u[3:rows+2, 2:cols+1] - 2*u[3:rows+2, 2:cols+1] +
-     u[2:rows+1, 1:cols])
+    u2_y = (u[3:rows+2, 2:cols+1] - 2*u[2:rows+1, 2:cols+1] +
+     u[1:rows, 2:cols+1])
+    u2_x = (u[3:rows+2, 2:cols+1] - 2*u[2:rows+1, 2:cols+1] +
+     u[1:rows, 2:cols+1])
+    v_face = (v[2:rows+1, 2:cols+1] + v[2:rows+1, 1:cols] +
+     v[3:rows+2, 2:cols+1] + v[3:rows+2, 1:cols])/4
+    u_star[2:rows+1, 2:cols+1] = u[2:rows+1, 2:cols+1] 
+     - dt*(u[2:rows+1, 2:cols+1]*u1_x + v_face*u1_y) 
+     + dt*(mu/rho)*(u2_x+u2_y) .+ dt*S_x
 
-    u1_x = (u[2:end-1, 3:end] - u[2:end-1, 1:end-2])/(2*dx)
 
+    v1_y = (v[3:rows+2, 2:cols+1] - v[1:rows, 2:cols+1])/(2*dy)
+    v1_x = (v[2:rows+1, 3:cols+2] - v[2:rows+1, 1:cols])/(2*dx)
+    v2_y = (v[3:rows+2, 2:cols+1] - 2*v[2:rows+1, 2:cols+1] +
+     v[1:rows, 2:cols+1])
+    v2_x = (v[3:rows+2, 2:cols+1] - 2*v[2:rows+1, 2:cols+1] +
+     v[1:rows, 2:cols+1])
+    u_face = (u[2:rows+1, 2:cols+1] + u[2:rows+1, 3:cols+2] +
+     u[1:rows, 2:cols+1] + u[1:rows, 3:cols+2])/4
+    v_star[2:rows+1, 2:cols+1] = v[2:rows+1, 2:cols+1] 
+     - dt*(v[2:rows+1, 2:cols+1]*v1_y + u_face*v1_x) 
+     + dt*(mu/rho)*(v2_x+v2_y) .+ dt*S_y
+
+    # Save the calculated starred velocities to the space struct
+
+    space.u_star = copy(u_star)
+    space.v_star = copy(v_star)
+
+end
+
+# The second function is used to iteratively solve the pressure Possion equation from the starred velocities 
+# to calculate pressure at t+delta_t
+
+
+function SolvePressurePoisson!(space::Space,
+                              fluid::Fluid,
+                              left::Boundary,
+                              right::Boundary,
+                              top::Boundary,
+                              bottom::Boundary)
+
+    # Save struct attributes for improve readability
+
+    rows = space.rowpts
+    cols = space.colpts
+    u_star = space.u_star
+    v_star = space.v_star
+    p = space.p
+    dx = space.dx
+    dy = space.dy
+    dt = space.dt
+    rho = fluid.rho
+    factor = 1/(2/dx^2 + 2/dy^2)
+
+    # Define the intial error and tolerance for convergence (error > tol at least initially)
+    error = 1
+    tol = 1e-3
+
+    # Evaluate derivative of starred velocities
+    u_star1_x = (u_star[2:rows+1, 3:rows+2] - u_star[2:rows+1, 1:cols])/(2*dx)
+    v_star1_y = (v_star[3:rows+2, 2:rows+1] - u_star[1:rows, 2:cols+1])/(2*dy)
+ 
+    # Continue iterative solution until error becomes smaller than tolerance
+    i = 0 
+    while (error>tol)
+        i = i + 1
+        #print(i)
+
+        # Save current pressure as p_old
+        p_old = copy(p)
+
+
+        # Evaluate second derivative of pressure from p_old
+        p2_xy = (p_old[3:rows+2, 2:cols+1] + p_old[1:rows, 2:cols+1])/dy^2 +
+         (p_old[2:rows+1, 3:cols+2] + p_old[2:rows+1, 1:cols])/dx^2
+
+        # Calculate new pressure
+
+        p[2:rows+1, 2:cols+1] = (p2_xy)*factor - (rho*factor/dt)*(u_star1_x+v_star1_y)
+
+        #Find maximum error between old and new pressure matrices
+        
+        error = maximum(abs.(p-p_old))
+
+        #Apply pressure boundary conditions
+
+        setPBoundary!(space, left, right, top, bottom)
+
+        #Escape condition in case solution does not converge after 500 iterations
+        if i > 500
+            tol = tol*10
+
+        end
+    end
+end
+
+
+function SolveMomentumEquation!(space::Space, fluid::Fluid)
+    # Save struct attributes for improve readability
+
+    rows = space.rowpts
+    cols = space.colpts
+    u_star = space.u_star
+    v_star = space.v_star
+    p = space.p
+    dx = space.dx
+    dy = space.dy
+    dt = space.dt
+    rho = fluid.rho
+    u = space.u
+    v = space.v
+
+    #Evaluate first derivative of pressure in x direction
+    p1_x = (p[2:rows+1, 3:rows+2] - p[2:rows+1, 1:cols])/(2*dx)
+
+    # Calculate u at the next SetTimeStep
+    u[2:rows+1, 2:cols+1]= u_star[2:rows+1, 2:cols+1]-(dt/rho)*p1_x
+
+    #Evaluate first derivative of pressure in y direction
+    p1_y = (p[3:rows+2, 2:rows+1] - p[1:rows, 2:cols+1])/(2*dy)
+
+    #Calculate v at next timestep
+    v[2:rows+1, 2:cols+1]= v_star[2:rows+1,2:cols+1]-(dt/rho)*p1_y
+
+end
+
+
+function SetCentrePUV!(space::Space)
+    space.p_c = space.p[2:end-1, 2:end]
+    space.u_c = space.u[2:end-1, 2:end]
+    space.v_c = space.v[2:end-1, 2:end]
+end
+
+function MakeResultDirectory(;wipe::Bool=true)
+
+    # Get path to the Result directory
+    cwdir = pwd()
+    inter_path = joinpath(cwdir, "7_Cavity_Primitive_variables", "Juliatonic")
+    dir_path = joinpath(inter_path, "Result")
+    
+
+    # If directory does not exists, make iterations
+    
+    if !isdir(dir_path)
+        mkdir(dir_path)
+    else
+        # If wipe is true, remove files present  in the directory
+        if wipe
+            cd(dir_path)
+            filelist = readdir()
+            for file in filelist
+                rm(file)
+            end
+        end
+    end
+    cd(cwdir)
+
+end
+
+function WriteToFile(space::Space, iteration, interval)
+    if (1/2 * iteration % interval == 0)
+        cwdir = pwd()
+        inter_path = joinpath(cwdir, "7_Cavity_Primitive_variables", "Juliatonic")
+        dir_path = joinpath(inter_path, "Result") 
+        filename = "PUV$(iteration).txt"
+        path = joinpath(dir_path, filename)
+        open(path, "w") do f
+            for i in 1:space.rowpts
+                for j in 1:space.colpts
+                    println(f, "$(space.p_c[i, j])\t$(space.u_c[i, j])\t$(space.v_c[i, j])")
+                end
+            end
+        end
+    end
+end
 
 
 end
