@@ -4,7 +4,7 @@ using FileIO
 export Boundary, Space, CreateMesh!, Fluid, SetCentrePUV!
 export SetDeltas!, SetTimeStep!, setPBoundary!, WriteToFile
 export GetStarredVelocities!, SolvePressurePoisson!, SolveMomentumEquation!
-export setUBoundary!, setVBoundary!, MakeResultDirectory
+export setUBoundary!, setVBoundary!, MakeResultDirectory, UpdateSolution!
 
 struct Boundary
     type::String
@@ -261,28 +261,18 @@ function GetStarredVelocities!(space::Space, fluid::Fluid)
     #u1_y = (u[3:end, 2:end-1] - u[1:end-2, 2:end-1])/(2*dy)
     u1_y = (u[3:rows+2, 2:cols+1] - u[1:rows, 2:cols+1])/(2*dy)
     u1_x = (u[2:rows+1, 3:cols+2] - u[2:rows+1, 1:cols])/(2*dx)
-    u2_y = (u[3:rows+2, 2:cols+1] - 2*u[2:rows+1, 2:cols+1] +
-     u[1:rows, 2:cols+1])
-    u2_x = (u[3:rows+2, 2:cols+1] - 2*u[2:rows+1, 2:cols+1] +
-     u[1:rows, 2:cols+1])
-    v_face = (v[2:rows+1, 2:cols+1] + v[2:rows+1, 1:cols] +
-     v[3:rows+2, 2:cols+1] + v[3:rows+2, 1:cols])/4
-    u_star[2:rows+1, 2:cols+1] = u[2:rows+1, 2:cols+1] 
-     - dt*(u[2:rows+1, 2:cols+1]*u1_x + v_face*u1_y) 
-     + dt*(mu/rho)*(u2_x+u2_y) .+ dt*S_x
+    u2_y = (u[3:rows+2, 2:cols+1] - 2*u[2:rows+1, 2:cols+1] + u[1:rows, 2:cols+1])/(dy^2)
+    u2_x = (u[2:rows+1, 3:cols+2] - 2*u[2:rows+1, 2:cols+1] + u[2:rows+1, 1:cols])/(dx^2)
+    v_face = (v[2:rows+1, 2:cols+1] + v[2:rows+1, 1:cols] + v[3:rows+2, 2:cols+1] + v[3:rows+2, 1:cols])/4
+    u_star[2:rows+1, 2:cols+1] = u[2:rows+1, 2:cols+1] - dt*(u[2:rows+1, 2:cols+1].*u1_x + v_face.*u1_y) + (dt*(mu/rho)*(u2_x+u2_y)) .+ dt*S_x
 
 
     v1_y = (v[3:rows+2, 2:cols+1] - v[1:rows, 2:cols+1])/(2*dy)
     v1_x = (v[2:rows+1, 3:cols+2] - v[2:rows+1, 1:cols])/(2*dx)
-    v2_y = (v[3:rows+2, 2:cols+1] - 2*v[2:rows+1, 2:cols+1] +
-     v[1:rows, 2:cols+1])
-    v2_x = (v[3:rows+2, 2:cols+1] - 2*v[2:rows+1, 2:cols+1] +
-     v[1:rows, 2:cols+1])
-    u_face = (u[2:rows+1, 2:cols+1] + u[2:rows+1, 3:cols+2] +
-     u[1:rows, 2:cols+1] + u[1:rows, 3:cols+2])/4
-    v_star[2:rows+1, 2:cols+1] = v[2:rows+1, 2:cols+1] 
-     - dt*(v[2:rows+1, 2:cols+1]*v1_y + u_face*v1_x) 
-     + dt*(mu/rho)*(v2_x+v2_y) .+ dt*S_y
+    v2_y = (v[3:rows+2, 2:cols+1] - 2*v[2:rows+1, 2:cols+1] + v[1:rows, 2:cols+1])/(dy^2)
+    v2_x = (v[2:rows+1, 3:cols+2] - 2*v[2:rows+1, 2:cols+1] + v[2:rows+1, 1:cols])/(dx^2)
+    u_face = (u[2:rows+1, 2:cols+1] + u[2:rows+1, 3:cols+2] + u[1:rows, 2:cols+1] + u[1:rows, 3:cols+2])/4
+    v_star[2:rows+1, 2:cols+1] = v[2:rows+1, 2:cols+1] - dt*(v[2:rows+1, 2:cols+1].*v1_y + u_face.*v1_x) + (dt*(mu/rho)*(v2_x+v2_y)) .+ dt*S_y
 
     # Save the calculated starred velocities to the space struct
 
@@ -321,7 +311,7 @@ function SolvePressurePoisson!(space::Space,
 
     # Evaluate derivative of starred velocities
     u_star1_x = (u_star[2:rows+1, 3:rows+2] - u_star[2:rows+1, 1:cols])/(2*dx)
-    v_star1_y = (v_star[3:rows+2, 2:rows+1] - u_star[1:rows, 2:cols+1])/(2*dy)
+    v_star1_y = (v_star[3:rows+2, 2:rows+1] - v_star[1:rows, 2:cols+1])/(2*dy)
  
     # Continue iterative solution until error becomes smaller than tolerance
     i = 0 
@@ -334,8 +324,7 @@ function SolvePressurePoisson!(space::Space,
 
 
         # Evaluate second derivative of pressure from p_old
-        p2_xy = (p_old[3:rows+2, 2:cols+1] + p_old[1:rows, 2:cols+1])/dy^2 +
-         (p_old[2:rows+1, 3:cols+2] + p_old[2:rows+1, 1:cols])/dx^2
+        p2_xy = (p_old[3:rows+2, 2:cols+1] + p_old[1:rows, 2:cols+1])/dy^2 + (p_old[2:rows+1, 3:cols+2] + p_old[2:rows+1, 1:cols])/dx^2
 
         # Calculate new pressure
 
@@ -389,9 +378,9 @@ end
 
 
 function SetCentrePUV!(space::Space)
-    space.p_c = space.p[2:end-1, 2:end]
-    space.u_c = space.u[2:end-1, 2:end]
-    space.v_c = space.v[2:end-1, 2:end]
+    space.p_c = space.p[2:end-1, 2:end-1]
+    space.u_c = space.u[2:end-1, 2:end-1]
+    space.v_c = space.v[2:end-1, 2:end-1]
 end
 
 function MakeResultDirectory(;wipe::Bool=true)
@@ -437,5 +426,49 @@ function WriteToFile(space::Space, iteration, interval)
     end
 end
 
+function UpdateSolution!(; space::Space, fluid::Fluid, flow::Boundary, noslip::Boundary, zeroflux::Boundary, pressureatm::Boundary,
+    time::Float64, CFL_number::Float64, interval::Int64, file_flag::Int64)
+
+    t = 0
+    i = 0
+
+    while t < time
+        #printf("\rSimulation time left: %.2f", time - t)
+        flush(stdout)
+    
+        CFL = CFL_number
+        SetTimeStep!(CFL, space)
+        timestep = space.dt
+    
+        setUBoundary!(space, noslip, noslip, flow, noslip)
+        setVBoundary!(space, noslip, noslip, noslip, noslip)
+        setPBoundary!(space, zeroflux, zeroflux, pressureatm, zeroflux)
+        GetStarredVelocities!(space, fluid)
+    
+        SolvePressurePoisson!(space, fluid, zeroflux, zeroflux, pressureatm, zeroflux)
+        SolveMomentumEquation!(space, fluid)
+    
+        SetCentrePUV!(space)
+        if file_flag == 1
+            WriteToFile(space, i, interval)
+        end
+    
+        t += timestep
+        println(timestep)
+        i += 1
+        println(i)
+    
+        # if i == 5
+        #     println(space.u_c)
+        # elseif i == 55
+        #     println(space.u_c)
+        # elseif i == 105
+        #     println(space.u_c)
+        # elseif i == 155
+        #     println(space.u_c)
+        # end
+    end
+
+end
 
 end

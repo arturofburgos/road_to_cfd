@@ -4,9 +4,9 @@ using .FlowJulia, Printf
 
 length = 4.0
 breadth = 4.0
-colpts = 257
-rowpts = 257
-time = 1
+colpts = 277
+rowpts = 277
+time = 50.0
 
 ###############################MISC############################################
 CFL_number = 0.8 # Do not touch this unless solution diverges
@@ -21,7 +21,7 @@ mu = 0.01
 ##########################DEFINE INITIAL MOMENTUM PARAMETERS###################
 u_in = 1.0
 v_wall = 0.0
-p_out = 0.0
+p_out = 1.0
 
 ###############################################################################
 ########################CREATE SPACE OBJECT####################################
@@ -54,39 +54,37 @@ println("# Re/u: $(rho * length / mu)\tRe/v: $(rho * breadth / mu)")
 #println("# Save outputs to text file: $(bool(file_flag))")
 MakeResultDirectory()
 
-while t < time
-    #printf("\rSimulation time left: %.2f", time - t)
-    flush(stdout)
 
-    CFL = CFL_number
-    SetTimeStep!(CFL, cavity)
-    timestep = cavity.dt
-
-    setUBoundary!(cavity, noslip, noslip, flow, noslip)
-    setVBoundary!(cavity, noslip, noslip, noslip, noslip)
-    setPBoundary!(cavity, zeroflux, zeroflux, pressureatm, zeroflux)
-    GetStarredVelocities!(cavity, water)
-
-    SolvePressurePoisson!(cavity, water, zeroflux, zeroflux, pressureatm, zeroflux)
-    SolveMomentumEquation!(cavity, water)
-
-    SetCentrePUV!(cavity)
-    # if file_flag == 1
-    #     WriteToFile(cavity, i, interval)
-    # end
-
-    t += timestep
-    # println(t)
-    i += 1
-    println(i)
-
-    if i == 5
-        println(cavity.u_c)
-    elseif i == 55
-        println(cavity.u_c)
-    elseif i == 105
-        println(cavity.u_c)
-    elseif i == 155
-        println(cavity.u_c)
+function SetTimeStep!(CFL::Float64, space::Space)
+    dt = CFL / sum([maximum(space.u) / space.dx, maximum(space.v) / space.dy])
+    # Escape condition if dt is infinity due to zero velocity initially
+    if isinf(dt)
+        dt = CFL * (space.dx + space.dy)
     end
+    space.dt = dt
 end
+
+
+
+
+CFL = CFL_number
+
+SetTimeStep!(CFL, cavity)
+
+
+
+setUBoundary!(cavity, noslip, noslip, flow, noslip)
+setVBoundary!(cavity, noslip, noslip, noslip, noslip)
+setPBoundary!(cavity, zeroflux, zeroflux, pressureatm, zeroflux)
+GetStarredVelocities!(cavity, water)
+
+SolvePressurePoisson!(cavity, water, zeroflux, zeroflux, pressureatm, zeroflux)
+SolveMomentumEquation!(cavity, water)
+SetCentrePUV!(cavity)
+
+
+
+# print("end")
+UpdateSolution!(; space=cavity, fluid=water, flow=flow, noslip=noslip, zeroflux=zeroflux, pressureatm=pressureatm,
+    time=time, CFL_number=CFL_number, interval=interval, file_flag=file_flag)
+
