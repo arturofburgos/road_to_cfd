@@ -1,5 +1,6 @@
 include("FlowJulia.jl")
-using .FlowJulia, Printf #, Plots
+using .FlowJulia, Printf#
+using CairoMakie
 
 
 length = 1.0
@@ -114,17 +115,17 @@ display(p2)
 
 
 
-contourf(x,y, p_c, color=:viridis, levels=8, aspect_ratio=:equal, clims = (0.4, 2.0))
+# contourf(x,y, p_c, color=:viridis, levels=8, aspect_ratio=:equal, clims = (0.4, 2.0))
 
-xp = x .+ 0 * y'
-yp = 0 * x .+ y'
-scale = 0.1
+# xp = x .+ 0 * y'
+# yp = 0 * x .+ y'
+# scale = 0.1
 
-ux_scaled = scale * u_c
+# ux_scaled = scale * u_c
 
-vy_scaled = scale * v_c
+# vy_scaled = scale * v_c
 
-quiver!(xp, yp, quiver=(ux_scaled', vy_scaled'), aspect_ratio=:equal, color=:black)
+# quiver!(xp, yp, quiver=(ux_scaled', vy_scaled'), aspect_ratio=:equal, color=:black)
 
 
 
@@ -138,15 +139,31 @@ end
 
 function vector_field5(p)
     # Convert the coordinates to indices
-    i = clamp(round(Int, p[1]), 1, 31)  # X index
-    j = clamp(round(Int, p[2]), 1, 31)  # Y index
+    i = clamp(round(Int, p[1]*31), 1, 31)  # X index
+    j = clamp(round(Int, p[2]*31), 1, 31)  # Y index
     
     # Fetch the vector components from U and V matrices
     return Point2f(u_c[j, i], v_c[j, i])
 end
 
 
-vector_field5([31,0])
+# vector_field5([31,0])
 
 
-fig, ax, plt = streamplot(vector_field5, -0..31, -0..31, colormap=:magma)
+# fig, ax, plt = streamplot(vector_field5, -0..31, -0..31, colormap=:magma)
+
+# fig, ax, plt = streamplot(vector_field5, -0..1, -0..1, colormap=:magma)
+
+
+# streamplot!(vector_field5, -0..31, -0..31, colormap=:magma)
+
+
+
+
+
+
+fig, ax, plt = contourf(x, y, p_c', levels=25)
+streamplot!(vector_field5, 0..1, 0..1, colormap=:magma)
+Colorbar(fig[1, 2], plt)
+
+fig
