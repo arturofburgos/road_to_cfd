@@ -1,10 +1,16 @@
 module FlowJulia
 
-using FileIO
-export Boundary, Space, CreateMesh!, Fluid, SetCentrePUV!
-export SetDeltas!, SetTimeStep!, setPBoundary!, WriteToFile
-export GetStarredVelocities!, SolvePressurePoisson!, SolveMomentumEquation!
-export setUBoundary!, setVBoundary!, MakeResultDirectory, UpdateSolution!
+using FileIO, Printf
+export Boundary, Space, CreateMesh!, Fluid
+export SetDeltas!, SetTimeStep!
+export MakeResultDirectory, UpdateSolution!
+
+# TODO: Ask Nick if I need the export all the functions from this module, cuz I think it is not needed, as I wrote above
+# export Boundary, Space, CreateMesh!, Fluid, SetCentrePUV!
+# export SetDeltas!, SetTimeStep!, setPBoundary!, WriteToFile
+# export GetStarredVelocities!, SolvePressurePoisson!, SolveMomentumEquation!
+# export setUBoundary!, setVBoundary!, MakeResultDirectory, UpdateSolution!
+
 
 struct Boundary
     type::String
@@ -388,15 +394,15 @@ function MakeResultDirectory(;wipe::Bool=true)
     # Get path to the Result directory
     cwdir = pwd()
     inter_path = joinpath(cwdir, "7_Cavity_Primitive_variables", "Juliatonic")
-    dir_path = joinpath(inter_path, "Result")
-    
+    dir_path = joinpath(inter_path, "Result", "Snapshots")
+    inter_path2 = joinpath(inter_path, "Result")
 
     # If directory does not exists, make iterations
     
     if !isdir(dir_path)
-        mkdir(dir_path)
+        mkpath(dir_path)
     else
-        # If wipe is true, remove files present  in the directory
+        # If wipe is true, remove files present in the directory
         if wipe
             cd(dir_path)
             filelist = readdir()
@@ -413,7 +419,7 @@ function WriteToFile(space::Space, iteration, interval)
     if (1/2 * iteration % interval == 0)
         cwdir = pwd()
         inter_path = joinpath(cwdir, "7_Cavity_Primitive_variables", "Juliatonic")
-        dir_path = joinpath(inter_path, "Result") 
+        dir_path = joinpath(inter_path, "Result", "Snapshots") 
         filename = "PUV$(iteration).txt"
         path = joinpath(dir_path, filename)
         open(path, "w") do f
@@ -426,19 +432,48 @@ function WriteToFile(space::Space, iteration, interval)
     end
 end
 
+
+function WriteToLog(space::Space, timeinit, iter, timestep ; boolprintconsole::Bool = true)
+    cwdir = pwd()
+    inter_path = joinpath(cwdir, "7_Cavity_Primitive_variables", "Juliatonic")
+    filename = "Cavity.log"
+    path = joinpath(inter_path, filename)
+    elapsed = time() - timeinit
+
+    sum_pressure = sum(space.p_c)
+    open(path, "a") do f
+        @printf(f, "Iteration: %d | WallTime: %.5f | TimeStep: %.5f | TotalPressure: %.2f\n", iter, elapsed, timestep, sum_pressure)
+    end
+
+    if boolprintconsole == true
+        @printf("Iteration: %d | WallTime: %.7f | TimeStep: %.5f | TotalPressure: %.2f\n", iter, elapsed, timestep, sum_pressure)
+    end
+end
+
+
 function UpdateSolution!(; space::Space, fluid::Fluid, flow::Boundary, noslip::Boundary, zeroflux::Boundary, pressureatm::Boundary,
-    time::Float64, CFL_number::Float64, interval::Int64, file_flag::Int64)
+    time::Float64, CFL_number::Float64, interval::Int64, file_flag::Int64, timeinit::Float64)
 
     t = 0
-    i = 0
+    iter = 0
 
     while t < time
-        #printf("\rSimulation time left: %.2f", time - t)
-        flush(stdout)
-    
+
+
+        
+
+
         CFL = CFL_number
         SetTimeStep!(CFL, space)
         timestep = space.dt
+
+        WriteToLog(space, timeinit, iter, timestep)
+        # Uncomment if you want to see the iteration and time-step at each iteration 
+        # println(i)
+        # println(timestep)
+        # sum_pressure = sum(space.p_c)
+        # @printf("Simulation time left: %.2f | Timestep: %.5f | Summatiton of total pressure: %.5f \n", time - t, timestep, sum_pressure)
+        # flush(stdout)
     
         setUBoundary!(space, noslip, noslip, flow, noslip)
         setVBoundary!(space, noslip, noslip, noslip, noslip)
@@ -450,14 +485,21 @@ function UpdateSolution!(; space::Space, fluid::Fluid, flow::Boundary, noslip::B
     
         SetCentrePUV!(space)
         if file_flag == 1
-            WriteToFile(space, i, interval)
+            WriteToFile(space, iter, interval)
         end
+
+        # Uncomment if you want to see the iteration and time-step at each iteration 
+        # println(i)
+        # println(timestep)
+        # sum_pressure = sum(space.p_c)
+        # @printf("Simulation time left: %.2f | Timestep: %.5f | Summatiton of total pressure: %.5f \n", time - t, timestep, sum_pressure)
+        # flush(stdout)
     
         t += timestep
-        println(timestep)
-        i += 1
-        println(i)
-    
+        iter += 1
+
+
+        # Using the following part for debugging purposes
         # if i == 5
         #     println(space.u_c)
         # elseif i == 55
