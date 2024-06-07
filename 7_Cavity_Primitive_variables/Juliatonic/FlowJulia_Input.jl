@@ -1,83 +1,81 @@
 timeinit = time()
 include("FlowJulia.jl")
-using .FlowJulia, Printf#
+using .FlowJulia, Printf
 using CairoMakie
 
 
-length = 8.0
+length = 4.0
 breadth = 4.0
 colpts = 111
 rowpts = 111
-final_time = 5.0
+final_time = 50.0
 
-###############################MISC############################################
-CFL_number = 0.5 # Do not touch this unless solution diverges
+
+#================================#
+#       Define Miscelaneous      #
+#================================#
+
+CFL_number = 0.8 # Do not touch this unless solution diverges
 file_flag = 1 # Keep 1 to print results to file
 interval = 100 # Record values in file per interval number of iterations
 plot_flag = 1 # Keep 1 to plot results at the end
 
-###########################DEFINE PHYSICAL PARAMETERS##########################
+#===============================#
+#  Define Physical Parammeters  #
+#===============================#
+
 rho = 1.0
 mu = 0.01
 
-##########################DEFINE INITIAL MOMENTUM PARAMETERS###################
+#================================#
+#   Define Momentum Quantities   #
+#================================#
 u_in = 1.0
 v_wall = 0.0
 p_out = 0.0
 
-###############################################################################
-########################CREATE SPACE OBJECT####################################
+
+
+#================================#
+# Create Space and Fluid structs #
+#================================#
+
 cavity = Space(rowpts, colpts)
 CreateMesh!(cavity, rowpts, colpts)
 SetDeltas!(cavity, breadth, length)
 water = Fluid(rho, mu)
 
-###############################################################################
-#########################BOUNDARY DEFINITIONS##################################
-########################CREATE BOUNDARY OBJECTS################################
-###########################VELOCITY############################################
+#======================#
+# Boundary Definitions #
+#======================#
+
 flow = Boundary("D", u_in)
 noslip = Boundary("D", v_wall)
 zeroflux = Boundary("N", 0.0)
-############################PRESSURE###########################################
 pressureatm = Boundary("D", p_out)
 
-#######################USER INPUT ENDS#########################################
-###############################################################################
-#############################INITIALIZATION####################################
-t = 0
-i = 0
-############################THE RUN############################################
+
+# Begin the run:
+
 println("######## Beginning FlowPy Simulation ########")
 println("#############################################")
 println("# Simulation time: $(final_time)")
 println("# Mesh: $(colpts) x $(rowpts)")
 println("# Re/u: $(rho * length / mu)\tRe/v: $(rho * breadth / mu)")
-#println("# Save outputs to text file: $(bool(file_flag))")
 MakeResultDirectory()
-
-
-function SetTimeStep!(CFL::Float64, space::Space)
-    dt = CFL / sum([maximum(space.u) / space.dx, maximum(space.v) / space.dy])
-    # Escape condition if dt is infinity due to zero velocity initially
-    if isinf(dt)
-        dt = CFL * (space.dx + space.dy)
-    end
-    space.dt = dt
-end
-
-
 
 # elapsed_time = @elapsed begin
 #     UpdateSolution!(; space=cavity, fluid=water, flow=flow, noslip=noslip, zeroflux=zeroflux, pressureatm=pressureatm,
 #     time=time, CFL_number=CFL_number, interval=interval, file_flag=file_flag)
 # end
-# print("end")
 
-UpdateSolution!(; space=cavity, fluid=water, flow=flow, noslip=noslip, zeroflux=zeroflux, pressureatm=pressureatm,
+UpdateSolution!(; space=cavity, fluid=water, flow=flow, noslip=noslip, zeroflux=zeroflux, pressureatm=pressureatm, 
     time=final_time, CFL_number=CFL_number, interval=interval, file_flag=file_flag, timeinit=timeinit)
 
 
+#=============================#
+# Ghia results for comparison #
+#=============================#
 
 x = range(0, length , colpts)
 y = range(0, breadth, rowpts)
@@ -101,7 +99,7 @@ y_g = [breadth * y for y in y_g]
 x_g = [length * x for x in x_g]
 
 
-
+# Using Plots as a backend for plotting
 # # Plot 1: Horizontal velocity vs Vertical distance along center
 # p1 = plot(y, u_c[:, ceil(Int, colpts/2)], label="Numerical Solution", color=:darkblue, linewidth=2)
 # scatter!(y_g, u_g, label="Ghia et al. Benchmark", color=:red, marker=:x, markersize=3)
@@ -131,6 +129,7 @@ x_g = [length * x for x in x_g]
 #     X, Y
 # end
 
+# Using Makie as a backend for plotting
 fig1 = Figure()
 ax1 = Axis(fig1[1,1], 
           title = "Benchmark plot 1",
@@ -155,66 +154,9 @@ axislegend()
 current_figure()
 display(fig2)
 
-# function VectorField(p)
-#     # Convert the coordinates to indices
-#     i = clamp(round(Int, p[1]*colpts), 1, colpts)  # X index
-#     j = clamp(round(Int, p[2]*rowpts), 1, rowpts)  # Y index
-    
-#     # Fetch the vector components from U and V matrices
-#     return Point2f(u_c[j, i], v_c[j, i])
-# end
 
-# fig3 = Figure()
-# ax3 = Axis(fig3[1,1], 
-#           title = "Pressure and Velocity Streamlines", 
-#           xlabel = "x",
-#           ylabel = "y"
-#           )
-# plt1 = contourf!(ax3, x, y, p_c', levels = 10)
-# plt2 = streamplot!(ax3, VectorField, 0..4, 0..4, colormap=:magma) # xinterval = 0..1 and yinterval = 0..1 are the implicit inputs for the function vector_field
-# Colorbar(fig3[1, 2], plt1)
-# Colorbar(fig3[1, 3], plt2)
-# display(fig3)
-
-# fig4 = Figure()
-# ax4 = Axis(fig4[1,1], 
-#           title = "Pressure and Velocity Vectors", 
-#           xlabel = "x",
-#           ylabel = "y"
-#           )
-# xlims!(ax4, 0.0, 1.0)
-# ylims!(ax4, 0.0, 1.0)
-# plt1 = contourf!(ax4, x, y, p_c', levels = 10)
-# plt2 = arrows!(ax4, x[1:10:end], y[1:10:end],
-#  (u_c[1:10:end, 1:10:end])'*0.2,(v_c[1:10:end, 1:10:end])'*0.2)
-# Colorbar(fig4[1, 2], plt1)
-# fig4
-
-
-
-# function VectorField(p)
-#     # Convert the coordinates to indices
-#     i = clamp(round(Int, p[1]*colpts), 1, colpts)  # X index
-#     j = clamp(round(Int, p[2]*rowpts), 1, rowpts)  # Y index
-    
-#     # Fetch the vector components from U and V matrices
-#     return Point2f(u_c[j, i], v_c[j, i])
-# end
-
-
-# function VectorField(p)
-#     i = clamp(round(Int, p[1] * (colpts - 1) / 4) + 4, 1, colpts)  # Adjusted for range 0 to 4
-#     j = clamp(round(Int, p[2] * (rowpts - 1) / 4) + 4, 1, rowpts)  # Adjusted for range 0 to 4
-    
-#     # Fetch the vector components from U and V matrices
-#     return Point2f(u_c[j, i], v_c[j, i])
-# end
-
-
-function VectorField(p, ;length = length, breadth = breadth)
-    # Scale p values to range from 0 to 4
-    # scaled_p1 = p[1] * colpts 
-    # scaled_p2 = p[2] * rowpts
+function VectorField(p ;length = length, breadth = breadth)
+    # Scale p values to range from 0 to lenght_value and from 0 to breadth_value
 
     scaled_p1 = p[1] * colpts
     scaled_p2 = p[2] * rowpts
@@ -227,10 +169,6 @@ function VectorField(p, ;length = length, breadth = breadth)
 end
 
 
-
-
-
-
 fig3 = Figure()
 ax3 = Axis(fig3[1,1], 
           title = "Pressure and Velocity Streamlines", 
@@ -239,15 +177,13 @@ ax3 = Axis(fig3[1,1],
           )
 xlims!(ax3, 0.0, length)
 ylims!(ax3, 0.0, breadth)
-# xinterval = 0..length
-# yinterval = 0..breadth
 
-xinterval = 0..length
-yinterval = 0..breadth
+xinterval_vec_field = 0..length
+yinterval_vec_field = 0..breadth
 
-
-plt1 = contourf!(ax3, x, y, p_c', levels = 10)
-plt2 = streamplot!(ax3, VectorField, xinterval, yinterval, colormap=:magma)
+plt1 = contourf!(ax3, x, y, p_c', levels = 15)
+plt2 = streamplot!(ax3, VectorField, xinterval_vec_field, yinterval_vec_field,
+ colormap=:magma)
 Colorbar(fig3[1, 2], plt1)
 Colorbar(fig3[1, 3], plt2)
 display(fig3)
@@ -256,17 +192,18 @@ fig4 = Figure()
 ax4 = Axis(fig4[1,1], 
           title = "Pressure and Velocity Vectors", 
           xlabel = "x",
-          ylabel = "y"
+          ylabel = "y",
           )
-
 xlims!(ax4, 0.0, length)
 ylims!(ax4, 0.0, breadth)
 
-xinterval = 0:length/10:length
-yinterval = 0:breadth/10:breadth
+xinterval = Int(round(rowpts/(length^2)))
+yinterval = Int(round(colpts/(breadth^2)))
+amplification_factor = 1
 
 plt1 = contourf!(ax4, x, y, p_c', levels = 10)
-plt2 = arrows!(ax4, x[1:10:end], y[1:10:end], (u_c[1:10:end, 1:10:end])'*0.2, (v_c[1:10:end, 1:10:end])'*0.2)
+plt2 = arrows!(ax4, x[1:xinterval:end], y[1:yinterval:end],
+ (u_c[1:yinterval:end, 1:xinterval:end])'*amplification_factor,
+ (v_c[1:yinterval:end, 1:xinterval:end])'*amplification_factor)
 Colorbar(fig4[1, 2], plt1)
-
-fig4
+display(fig4)
